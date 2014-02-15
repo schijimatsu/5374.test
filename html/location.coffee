@@ -10,6 +10,26 @@ String.prototype.toOneByteAlphaNumeric = ->
   return @replace /[Ａ-Ｚａ-ｚ０-９]/g, (s) ->
     return String.fromCharCode s.charCodeAt(0) - 0xFEE0
 
+integrateNumbers = (numbers=[]) ->
+  temp = []
+  ret = []
+  for number in numbers.sort((a, b) -> return a - b)
+    number -= 0
+    if temp.length == 0 or temp.slice(-1)[0]+1 == number
+      temp.push number
+    else
+      ret.push broadOrSingle temp
+      temp = [number]
+  
+  ret.push broadOrSingle temp
+  return ret
+
+broadOrSingle = (list) ->
+  if list.length > 1
+    return "#{list[0]}〜#{list.slice(-1)[0]}"
+  else
+    return list[0]
+
 loadlib = (path) ->
   script = document.createElement 'script'
   script.setAttribute 'type', 'text/javascript'
@@ -71,6 +91,30 @@ getAllocationData = (address, callback) ->
   else
     getChikuList.call @, address, callback
 
+checkMoreThan = (banchi_under, narrowed_allocation) ->
+  r = ///^([^0-9]*?)([0-9]+?)〜$///
+  prefix = null
+  value = null
+  for k, v of narrowed_allocation
+    m = r.exec k
+    if m
+      prefix = m[1]
+      value = m[2]
+      break
+
+  if (value != null) and (banchi_under != '')
+    r = ///^(-|－)?([^0-9]*?)([0-9]+)$///
+    m = r.exec banchi_under
+    if m and (m[3]-0) >= (value.toOneByteAlphaNumeric()-0)
+      if prefix != null and prefix == m[2]
+        return [m[3], prefix+value+'〜']
+      else
+        return [m[3], value+'〜']
+    else
+      return null
+  else
+    return null
+
 getChikuList = (address, callback) ->
   list = {}
   m = ///^石川県金沢市(.*)$///.exec address
@@ -78,33 +122,49 @@ getChikuList = (address, callback) ->
     aza_under = m[1]
     m = ///#{"^(#{(name for name, _ of @allocation).join('|')})(.*)$"}///.exec aza_under
     if m
-      narrowed_allocation = @allocation[m[1]]
+      aza = m[1]
+      narrowed_allocation = @allocation[aza]
       gaiku_under = m[2]
-      r = ///#{"^-*(#{(number for number, _ of narrowed_allocation if number != '').sort((a, b) ->
+      r = ///#{"^(-|－)*(#{(number for number, _ of narrowed_allocation when number != '').sort((a, b) ->
         return b - a
       ).join('|')})(.*)$"}///
       m = r.exec gaiku_under.toOneByteAlphaNumeric()
       if m
-        narrowed_allocation = narrowed_allocation[m[1]]
-        banchi_under = m[2]
+        gaiku = m[2]
+        narrowed_allocation = narrowed_allocation[gaiku]
+        banchi_under = m[3]
       else if narrowed_allocation['']
-        narrowed_allocation = narrowed_allocation['']
+        gaiku = ''
+        narrowed_allocation = narrowed_allocation[gaiku]
         banchi_under = gaiku_under
       else
         alert 'The Gaiku that corresponds to the allocation-data could not be found. gaiku :'+gaiku_under
         
       if banchi_under != null
+        r = ///#{"^(-|－)*(#{(number for number, _ of narrowed_allocation when number != '').sort((a, b) -> return b - a).join('|')})(.*)$"}///
         m = r.exec banchi_under
         if m
-          list = [narrowed_allocation[m[1]]]
-        else if narrowed_allocation['']
-          list = [narrowed_allocation['']]
+          banchi = m[2]
+          list = ["1.#{address} _ #{aza}/#{gaiku}/#{banchi} _ #{narrowed_allocation[banchi]}"]
         else
-          alert 'The Banchi corresponds to the allocation-data could not be found. banchi :'+banchi_under
-          # list = ("#{banchi} : #{narrowed_allocation[banchi]}" for banchi in (banchi.toOneByteAlphaNumeric() for banchi, chiku of narrowed_allocation).sort((a, b) ->
-          list = ("#{narrowed_allocation[banchi]}" for banchi in (banchi.toOneByteAlphaNumeric() for banchi, chiku of narrowed_allocation).sort((a, b) ->
-            return a - b
-          ))
+          moreThan = checkMoreThan(banchi_under, narrowed_allocation)
+          if moreThan != null
+            list = ["4.#{address} _ #{aza}/#{gaiku}/#{moreThan[0]} _ #{narrowed_allocation[moreThan[1]]}"]
+          else if narrowed_allocation['']
+            banchi = ''
+            list = ["2.#{address} _ #{aza}/#{gaiku}/ _ #{narrowed_allocation['']}"]
+          else
+            alert 'The Banchi corresponds to the allocation-data could not be found. banchi :'+banchi_under
+            bu = {}
+            for banchi in (banchi.toOneByteAlphaNumeric() for banchi, chiku of narrowed_allocation).sort((a, b) -> return a - b)
+              if not bu[narrowed_allocation[banchi]]
+                bu[narrowed_allocation[banchi]] = [banchi]
+              else
+                bu[narrowed_allocation[banchi]].push banchi
+        
+            list = ("3.#{address} _ #{aza}/#{gaiku}/#{integrateNumbers(banchis).join ','} _ #{chiku}" for chiku, banchis of bu)
+      else
+        alert 'The Banchi could not be found in address.'
     else
       alert 'The Aza that corresponds to the allocation-data could not be found. aza :'+aza_under
   else
@@ -131,10 +191,11 @@ class Mapview
    # 初期化。bodyのonloadでinit()を指定することで呼び出してます
   init: () ->
     # Google Mapで利用する初期設定用の変数
+    self = @
     @geocoder = new google.maps.Geocoder();
     latlon = new google.maps.LatLng(sample_lat, sample_lon)
     opts = {
-      zoom: 18, 
+      zoom: self.zoomLevel = 18, 
       mapTypeId: google.maps.MapTypeId.ROADMAP, 
       center: latlon, 
     }
@@ -142,8 +203,10 @@ class Mapview
     # getElementById("map")の"map"は、body内の<div id="map">より
     @map = new google.maps.Map(document.getElementById("map"), opts)
 
-    google.maps.event.addListener(@map, 'click', @codeLatLng)
-    self = @
+    google.maps.event.addListener @map, 'zoom_changed', ->
+      self.zoomLevel = self.map.getZoom()
+
+    google.maps.event.addListener @map, 'click', @codeLatLng
 
   codeLatLng: (event) ->
     # input = document.getElementById('latlng').value;
@@ -154,12 +217,19 @@ class Mapview
     reverseGeoCode.call self, lat, lon, 10, (result) ->
       console.log result
       getAllocationData.call self, result['Feature'][0]['Property']['Address'], (chiku_list) ->
-        self.map.setZoom 18
+        # self.map.setZoom self.zoomLevel
         self.marker = new google.maps.Marker {
           position: latlon, 
           map: self.map, 
         }
-        self.infowindow.setContent (chiku for chiku in chiku_list).join('<br/>')
+        # self.infowindow.setContent (chiku for chiku in chiku_list).join '<br/>'
+        self.infowindow.setContent window['Templates']['infowindow'].render {
+          content: ({item: chiku} for chiku in chiku_list)
+        }
+        # contains = $("div:contains('県')")
+        # $(contains.get contains.length-1).parent().parent().find("div:first > :eq(3)").css {
+        #   width: '500px', 
+        # }
         self.infowindow.open self.map, self.marker
 
     # self.geocoder.geocode {'latLng': latlon}, (results, status) ->
@@ -178,5 +248,6 @@ class Mapview
     #     alert 'Geocoder failed due to: ' + status
 
 $(() ->
+  loadlib "./template.js"
   new Mapview().init()
 )

@@ -1,0 +1,2 @@
+this["Templates"] = this["Templates"] || {};
+this["Templates"]["infowindow"] = new Hogan.Template(function(c,p,i){var _=this;_.b(i=i||"");_.b("<div style=\"width: 400px; height: 50px;\">");_.b("\n" + i);if(_.s(_.f("content",c,p,1),c,p,0,54,71,"{{ }}")){_.rs(c,p,function(c,p,_){_.b("  ");_.b(_.v(_.f("item",c,p,0)));_.b("<br/>");_.b("\n");});c.pop();}_.b("</div>");_.b("\n");return _.fl();;});

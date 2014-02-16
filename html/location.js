@@ -217,7 +217,8 @@
           banchi_under = this.address;
         } else if (this.allocation['others']) {
           this.key = 'others';
-          banchi_under = this.address;
+          banchi_under = null;
+          this.nodes[''] = new Banchi(this, this.allocation[this.key], this.address).narrow();
         } else {
           alert("The Gaiku that corresponds to the allocation-data could not be found.\naddress :" + this.parentNode.address + " gaiku :" + this.address);
           banchi_under = null;
@@ -389,7 +390,7 @@
             this.key = '';
             this.nodes[this.key] = this.allocation[''];
           } else if (this.parentNode.allocation['others']) {
-            this.nodes['others'] = this.parentNode.allocation['others'];
+            this.nodes[''] = this.parentNode.allocation['others'];
           } else {
             alert("The Banchi that corresponds to the allocation-data could not be found.\naddress :" + this.parentNode.parentNode.address + " banchi :" + this.address);
           }

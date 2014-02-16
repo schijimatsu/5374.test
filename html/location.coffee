@@ -138,7 +138,8 @@ class Gaiku extends SubNode
         banchi_under = @address
       else if @allocation['others']
         @key = 'others'
-        banchi_under = @address
+        banchi_under = null
+        @nodes[''] = new Banchi(@, @allocation[@key], @address).narrow()
       else
         alert "The Gaiku that corresponds to the allocation-data could not be found.\naddress :#{@parentNode.address} gaiku :#{@address}"
         banchi_under = null
@@ -231,7 +232,7 @@ class Banchi extends SubNode
           @key = ''
           @nodes[@key] = @allocation['']
         else if @parentNode.allocation['others']
-          @nodes['others'] = @parentNode.allocation['others']
+          @nodes[''] = @parentNode.allocation['others']
         else
           alert "The Banchi that corresponds to the allocation-data could not be found.\naddress :#{@parentNode.parentNode.address} banchi :#{@address}"
 

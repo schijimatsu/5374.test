@@ -526,8 +526,14 @@
               console.log("changed. " + (window.getAreaIndex(chiku)) + " / " + chiku);
               return alert(chiku + "が設定されました");
             } else {
-              return document.getElementById("ui").innerHTML = window['Templates']['table'].render({
+              document.getElementById("ui").innerHTML = window['Templates']['table'].render({
                 'choices': key_value_list
+              });
+              return $(".choose_area").click(function() {
+                chiku = this.find('td:last').text().replace("町", "");
+                $('#select_area').val(window.getAreaIndex(chiku)).change();
+                console.log("changed. " + (window.getAreaIndex(chiku)) + " / " + chiku);
+                return alert(chiku + "が設定されました");
               });
             }
           });

@@ -353,6 +353,11 @@ $(() ->
             document.getElementById("ui").innerHTML = window['Templates']['table'].render {
               'choices': key_value_list
             }
+            $(".choose_area").click ->
+              chiku = @.find('td:last').text().replace "町", ""
+              $('#select_area').val(window.getAreaIndex(chiku)).change()
+              console.log "changed. #{window.getAreaIndex(chiku)} / #{chiku}"
+              alert chiku + "が設定されました"
     , (message) ->
       console.log message
 )

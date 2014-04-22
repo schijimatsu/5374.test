@@ -8,10 +8,10 @@ module.exports = (grunt) ->
     coffee:
       glob_to_multiple: 
         expand: true,
-        flatten: true,
-        cwd: "#{PACKAGE_ROOT}/html",
-        src: ['*.coffee'],
-        dest: "#{PACKAGE_ROOT}/html",
+        flatten: false,
+        cwd: "grunt/src",
+        src: ['**/*.coffee'],
+        dest: "grunt/dist",
         ext: '.js', 
         join: true, 
 
@@ -19,10 +19,10 @@ module.exports = (grunt) ->
       dist:
         files: [{
           expand: true, 
-          flatten: true, 
-          cwd: "#{PACKAGE_ROOT}/html", 
-          src: ['*.sass'],
-          dest: "#{PACKAGE_ROOT}/html",
+          flatten: false, 
+          cwd: "grunt/src", 
+          src: ['**/*.sass'],
+          dest: "grunt/dist",
           ext: '.css'
         }]
 
@@ -32,22 +32,39 @@ module.exports = (grunt) ->
           namespace: "Templates" 
           prettify: true 
           defaultName: (filename) ->
-            console.log filename
             return filename.split('/').slice(-1)[0].split(".")[0]
         files:
-          "html/template.js": ["html/*.mustache"]
+          "grunt/dist/js/template.js": ["grunt/src/**/*.mustache"]
+
+    copy:
+      html:
+        files: [{
+          expand: true, 
+          flatten: false, 
+          cwd: 'grunt/src', 
+          src: ['**/*.html'], 
+          dest: 'grunt/dist', 
+        }],
+      dist:
+        files: [{
+          expand: true, 
+          flatten: false, 
+          cwd: 'grunt/dist', 
+          src: ['**/*.css', '**/*.js', '**/*.png', '**/*.jpg', '**/*.gif', '**/*.html'], 
+          dest: "#{PACKAGE_ROOT}", 
+        }],
 
     connect:
-      site: {}
-        # options:
-        #   port: 9000,
-        #   hostname: 'localhost',
-        #   # keepalive: true, 
-        #   livereload: true, 
-        #   open: false, 
-        #   middleware: (connect, options) ->
-        #     return [proxySnippet]
-        #   ,
+      livereload:
+        options:
+          port: 9000,
+          hostname: '192.168.1.24',
+          # keepalive: true, 
+          livereload: true, 
+          # open: false, 
+          # middleware: (connect, options) ->
+          #   return [proxySnippet]
+          # ,
 
       # server:
       #   proxies: [{
@@ -62,25 +79,44 @@ module.exports = (grunt) ->
       options:
         livereload: true
       files: [
-        "#{PACKAGE_ROOT}/**/*.coffee", 
-        "#{PACKAGE_ROOT}/**/*.sass", 
-        "#{PACKAGE_ROOT}/**/*.mustache", 
-        "#{PACKAGE_ROOT}/**/*.html", 
+        "grunt/src/**/*.coffee", 
+        "grunt/src/**/*.sass", 
+        "grunt/src/**/*.mustache", 
+        "grunt/src/**/*.html", 
       ]
       tasks: [
         'coffee',
         'sass',
         'hogan',
+        'copy',
       ]
   
   for taskName of pkg.devDependencies when taskName.substring(0, 6) is 'grunt-'
     grunt.loadNpmTasks taskName
 
-  grunt.registerTask 'default', [
+  grunt.registerTask 'build', [
     'coffee', 
     'sass', 
     'hogan', 
+  ]
+
+  grunt.registerTask 'dist', [
+    'build', 
+    'copy', 
+  ]
+
+  grunt.registerTask 'auto', [
+    'dist', 
+    'watch', 
+  ]
+
+  grunt.registerTask 'default', [
+    'auto', 
+  ]
+
+  grunt.registerTask 'live', [
+    'dist', 
     # 'configureProxies:server', 
-    'connect', 
+    'connect:livereload', 
     'watch'
   ]

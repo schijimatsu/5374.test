@@ -581,6 +581,7 @@ $(function() {
     }
     return -1;
   }
+  window.getAreaIndex = getAreaIndex;
   //リストが選択されたら
   $("#select_area").change(function(data) {
     var row_index = $(data.target).val();

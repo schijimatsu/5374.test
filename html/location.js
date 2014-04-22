@@ -1,6 +1,6 @@
 (function() {
   "use strict";
-  var APPID, AllocationManager, Aza, Banchi, Gaiku, Mapview, Node, SubNode, YOLP, allocationManager, failGetLocation, generatePulldownList, getLocation, jsonp, loadlib, reverseGeoCode, sample_lat, sample_lon, self, successGetLocation,
+  var APPID, AllocationManager, Aza, Banchi, Gaiku, Mapview, Node, SubNode, YOLP, absorbError, allocationManager, bit_lat, bit_lon, failGetLocation, generatePulldownList, geo_hash_precision, getLocation, horizontal_unit, jsonp, loadlib, reverseGeoCode, sample_lat, sample_lon, self, successGetLocation, unit_angle_lat, unit_angle_lon, vertical_unit,
     __hasProp = {}.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
@@ -73,6 +73,42 @@
       datum: 'wgs',
       callback: 'successReverseGeocode'
     }, callback);
+  };
+
+  geo_hash_precision = 9;
+
+  vertical_unit = 4.763;
+
+  horizontal_unit = 3.849;
+
+  bit_lat = Math.ceil(geo_hash_precision / 2);
+
+  bit_lon = Math.floor(geo_hash_precision / 2);
+
+  unit_angle_lat = 180 / Math.pow(2, bit_lat);
+
+  unit_angle_lon = 360 / Math.pow(2, bit_lon);
+
+  absorbError = function(lat, lon, accuracy, callback) {
+    var center_hash, diff_lat, diff_lon, sum_of_horizontal_unit, sum_of_vertical_unit, _results;
+    if (callback == null) {
+      callback = null;
+    }
+    center_hash = new GeoHash();
+    center_hash.encode(lat, lon);
+    diff_lat = center_hash.center_lat - lat;
+    diff_lon = center_hash.center_lon - lon;
+    sum_of_vertical_unit = vertical_unit / 2;
+    sum_of_horizontal_unit = horizontal_unit / 2;
+    _results = [];
+    while (accuracy < sum_of_vertical_unit && accuracy < sum_of_horizontal_unit) {
+      if (accuracy > sum_of_vertical_unit) {
+        _results.push(sum_of_vertical_unit += vertical_unit);
+      } else {
+        _results.push(void 0);
+      }
+    }
+    return _results;
   };
 
   allocationManager = null;
@@ -495,6 +531,7 @@
   };
 
   $(function() {
+    loadlib("./geohash.js");
     loadlib("./template.js");
     return new Mapview();
   });

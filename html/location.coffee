@@ -66,6 +66,27 @@ reverseGeoCode = (lat, lon, accuracy, callback=null) ->
     # dist: Math.floor(accuracy*1000)/1000, 
   }, callback
 
+geo_hash_precision = 9
+vertical_unit = 4.763
+horizontal_unit = 3.849
+bit_lat = Math.ceil geo_hash_precision * 5 / 2
+bit_lon = Math.floor geo_hash_precision * 5 / 2
+unit_angle_lat = 180 / 2 ** bit_lat
+unit_angle_lon = 360 / 2 ** bit_lon
+
+absorbError = (lat, lon, accuracy, callback=null) ->
+  center_hash = new GeoHash()
+  center_hash.encode(lat, lon)
+  accuracy_as_angle = accuracy
+  east_lat = 
+  diff_lat = center_hash.center_lat - lat
+  diff_lon = center_hash.center_lon - lon
+  sum_of_vertical_unit = vertical_unit / 2
+  sum_of_horizontal_unit = horizontal_unit / 2
+  while accuracy < sum_of_vertical_unit and accuracy < sum_of_horizontal_unit
+    if accuracy > sum_of_vertical_unit
+      sum_of_vertical_unit += vertical_unit
+
 # @successReverseGeocode = (result) ->
 #   # document.body.innerHTML = JSON.stringify result
 #   address = result['Feature'][0]['Property']['Address']
@@ -294,6 +315,7 @@ generatePulldownList = (struct, text='') ->
   return list
 
 $(() ->
+  loadlib "./geohash.js"
   loadlib "./template.js"
   new Mapview()
 )
